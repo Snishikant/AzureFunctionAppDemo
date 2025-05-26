@@ -13,12 +13,12 @@ app = func.FunctionApp()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 CONTAINER_NAME = os.getenv('EVALS_CONTAINER_NAME', 'psevals-data')
-StorageConnection = os.getenv('AzureWebJobsStorage')
+# Note: The StorageConnection line has been removed
 
 @app.blob_trigger(
     name="packageTrigger",
     path=f"{CONTAINER_NAME}/{{blob_name}}",
-    connection=f"{StorageConnection}"
+    connection="AzureWebJobsStorage"
 )
 def package_blob_trigger(blob: func.InputStream):
     """
@@ -35,6 +35,7 @@ def package_blob_trigger(blob: func.InputStream):
     build_id = blob_name[:-len(ZIP_SUFFIX)]
     logging.info(f"Extracted build_id: {build_id}")
 
+    tmp_zip_path = None  # Initialize tmp_zip_path
     try:
         # Write blob content to a temporary zip file
         with tempfile.NamedTemporaryFile(delete=False, suffix=ZIP_SUFFIX) as tmp_zip:
@@ -52,6 +53,6 @@ def package_blob_trigger(blob: func.InputStream):
 
     finally:
         # Clean up temporary ZIP file
-        if os.path.exists(tmp_zip_path):
+        if tmp_zip_path and os.path.exists(tmp_zip_path): # Safely check and delete
             os.remove(tmp_zip_path)
             logging.info(f"Deleted temporary ZIP: {tmp_zip_path}")
